@@ -1,0 +1,7 @@
+nextcord
+nextcord[voice]
+requests
+python-decouple
+youtube-search-python
+youtube-dl
+PyNaCl
