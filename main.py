@@ -7,7 +7,8 @@ from config import COMMAND_PREFIX, TOKEN
 
 def create_bot() -> commands.Bot:
     """Cria e configura a instância do bot."""
-    intents = nextcord.Intents.all()
+    intents = nextcord.Intents.default()
+    intents.message_content = True
     bot = commands.Bot(command_prefix=COMMAND_PREFIX, intents=intents)
     bot.remove_command("help")
     return bot
@@ -26,9 +27,9 @@ def load_extensions(bot: commands.Bot) -> None:
                 extension_name = rel_path[:-3].replace(os.path.sep, ".")
                 try:
                     bot.load_extension(extension_name)
-                    print(f"✓ Extensão carregada: {extension_name}")
+                    print(f"[OK] Extensao carregada: {extension_name}")
                 except Exception as error:
-                    print(f"✗ Erro ao carregar extensão {extension_name}: {error}")
+                    print(f"[ERRO] Falha ao carregar extensao {extension_name}: {error}")
 
 
 def main():

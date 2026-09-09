@@ -3,7 +3,12 @@ from decouple import config
 # Configurações do Discord Bot
 TOKEN = config("TOKEN", default="")
 COMMAND_PREFIX = config("COMMAND_PREFIX", default="!")
-TEXT_CHANNEL_ID = config("ID_CANAL_TEXTO", default=0, cast=int)
+def _cast_int_safe(value):
+    val_str = str(value).strip() if value is not None else ""
+    return int(val_str) if val_str.isdigit() else 0
+
+
+TEXT_CHANNEL_ID = config("ID_CANAL_TEXTO", default=0, cast=_cast_int_safe)
 
 # IDs dos servidores (Guild IDs) registrados para Slash Commands
 SERVIDORES = [
