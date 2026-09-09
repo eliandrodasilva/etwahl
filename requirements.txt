@@ -3,5 +3,6 @@ nextcord[voice]
 requests
 python-decouple
 youtube-search-python
+httpx<0.28
 youtube-dl
 PyNaCl
