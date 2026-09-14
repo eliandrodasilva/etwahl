@@ -21,16 +21,55 @@ YDL_OPTIONS = {
     'no_warnings': True,
 }
 
-# Dicionário de filas isoladas por servidor (guild_id)
-# queues[guild_id] = {
-#     'sources': [source, ...],
-#     'names': [currently_playing_title, next_title_1, next_title_2, ...]
-# }
 queues = {}
+disconnect_timers = {}
+last_text_channels = {}
+
+
+def cancel_disconnect_timer(guild_id: int):
+    task = disconnect_timers.pop(guild_id, None)
+    if task and not task.done():
+        task.cancel()
+
+
+def schedule_disconnect(guild, delay: int = 180, reason: str = "inatividade"):
+    guild_id = guild.id
+    cancel_disconnect_timer(guild_id)
+
+    async def _disconnect_task():
+        try:
+            await asyncio.sleep(delay)
+            voice_client = guild.voice_client
+            if voice_client and voice_client.is_connected() and voice_client.channel:
+                channel = voice_client.channel
+                humans = [m for m in channel.members if not m.bot]
+                is_idle = not voice_client.is_playing() and not voice_client.is_paused()
+                is_alone = len(humans) == 0
+
+                if is_alone or is_idle:
+                    queues.pop(guild_id, None)
+                    if voice_client.is_playing() or voice_client.is_paused():
+                        voice_client.stop()
+                    await voice_client.disconnect()
+
+                    text_channel = last_text_channels.pop(guild_id, None)
+                    if text_channel:
+                        try:
+                            if reason == "canal_vazio":
+                                await text_channel.send("👋 **Desconectada do canal de voz pois todos saíram da chamada.**")
+                            else:
+                                await text_channel.send("💤 **Desconectada do canal de voz por inatividade (fila vazia).**")
+                        except Exception:
+                            pass
+        except asyncio.CancelledError:
+            pass
+        finally:
+            disconnect_timers.pop(guild_id, None)
+
+    disconnect_timers[guild_id] = asyncio.create_task(_disconnect_task())
 
 
 def check_queue(guild_id, voice_client):
-    """Callback invocado automaticamente ao término de cada faixa de áudio."""
     if (
         voice_client
         and voice_client.is_connected()
@@ -42,16 +81,19 @@ def check_queue(guild_id, voice_client):
         voice_client.play(source, after=lambda error: check_queue(guild_id, voice_client))
     else:
         queues.pop(guild_id, None)
+        if voice_client and voice_client.is_connected() and voice_client.guild:
+            schedule_disconnect(voice_client.guild, delay=180, reason="inatividade")
 
 
 class Musics(commands.Cog):
-    """Comandos para reprodução de música em canais de voz."""
-
     def __init__(self, bot):
         self.bot = bot
 
+    def cog_unload(self):
+        for guild_id in list(disconnect_timers.keys()):
+            cancel_disconnect_timer(guild_id)
+
     async def _extract_song_info(self, query: str) -> dict:
-        """Busca e extrai metadados e URL de áudio do YouTube de forma assíncrona."""
         loop = asyncio.get_running_loop()
         is_url = bool(re.match(r'^(http(s)?://)?(www\.)?youtu', query))
 
@@ -104,7 +146,29 @@ class Musics(commands.Cog):
             'thumbnail': data.get('thumbnail') or thumbnail_url
         }
 
-    # ==================== SLASH COMMANDS ====================
+    @commands.Cog.listener()
+    async def on_voice_state_update(self, member: nextcord.Member, before: nextcord.VoiceState, after: nextcord.VoiceState):
+        if member.id == self.bot.user.id and after.channel is None:
+            cancel_disconnect_timer(member.guild.id)
+            queues.pop(member.guild.id, None)
+            last_text_channels.pop(member.guild.id, None)
+            return
+
+        voice_client = member.guild.voice_client
+        if not voice_client or not voice_client.is_connected() or not voice_client.channel:
+            return
+
+        bot_channel = voice_client.channel
+
+        if before.channel == bot_channel and after.channel != bot_channel:
+            humans = [m for m in bot_channel.members if not m.bot]
+            if len(humans) == 0:
+                schedule_disconnect(member.guild, delay=60, reason="canal_vazio")
+
+        elif after.channel == bot_channel and not member.bot:
+            cancel_disconnect_timer(member.guild.id)
+            if not voice_client.is_playing() and not voice_client.is_paused():
+                schedule_disconnect(member.guild, delay=180, reason="inatividade")
 
     @nextcord.slash_command(name="join", description="Chama o Bot para o seu Canal de Voz.", guild_ids=servidores)
     async def join(self, interaction: Interaction):
@@ -112,8 +176,12 @@ class Musics(commands.Cog):
             return await interaction.send("**Você precisa estar em um Canal de Voz!**")
 
         channel = interaction.user.voice.channel
+        last_text_channels[interaction.guild_id] = interaction.channel
+        cancel_disconnect_timer(interaction.guild_id)
+
         if interaction.guild.voice_client is None:
             await channel.connect()
+            schedule_disconnect(interaction.guild, delay=180, reason="inatividade")
             await interaction.send(f'**Conectada ao Canal** ``{channel}``')
         else:
             await interaction.send(f'**Já estou conectada ao canal **``{interaction.guild.voice_client.channel}``')
@@ -124,7 +192,10 @@ class Musics(commands.Cog):
             return await interaction.send("**Não estou conectada a nenhum canal de voz!**")
 
         channel = interaction.guild.voice_client.channel
+        cancel_disconnect_timer(interaction.guild_id)
         queues.pop(interaction.guild_id, None)
+        last_text_channels.pop(interaction.guild_id, None)
+
         if interaction.guild.voice_client.is_playing() or interaction.guild.voice_client.is_paused():
             interaction.guild.voice_client.stop()
         await interaction.guild.voice_client.disconnect()
@@ -145,6 +216,9 @@ class Musics(commands.Cog):
         voice_client = interaction.guild.voice_client
         if voice_client is None:
             voice_client = await channel.connect()
+
+        last_text_channels[interaction.guild_id] = interaction.channel
+        cancel_disconnect_timer(interaction.guild_id)
 
         song_info = await self._extract_song_info(url_video)
         if not song_info or not song_info.get('audio_url'):
@@ -210,8 +284,6 @@ class Musics(commands.Cog):
         voice_client.stop()
         await interaction.send(':fast_forward: **Tocando a próxima música.**')
 
-    # ==================== PREFIX COMMANDS (!) ====================
-
     @commands.command(aliases=['p'], pass_context=True)
     async def play(self, ctx, *url):
         if not ctx.author.voice or not ctx.author.voice.channel:
@@ -225,6 +297,9 @@ class Musics(commands.Cog):
         if ctx.voice_client is None:
             await voice_channel.connect()
             await ctx.send(f'**Conectada ao Canal** ``{voice_channel}``')
+
+        last_text_channels[ctx.guild.id] = ctx.channel
+        cancel_disconnect_timer(ctx.guild.id)
 
         async with ctx.typing():
             await ctx.send(f'🔎 **Procurando por: ** `{search_text}`')
@@ -351,7 +426,10 @@ class Musics(commands.Cog):
     @commands.command()
     async def stop(self, ctx):
         guild_id = ctx.guild.id
+        cancel_disconnect_timer(guild_id)
         queues.pop(guild_id, None)
+        last_text_channels.pop(guild_id, None)
+
         if ctx.voice_client:
             ctx.voice_client.stop()
             await ctx.voice_client.disconnect()
