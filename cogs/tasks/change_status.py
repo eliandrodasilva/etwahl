@@ -17,7 +17,7 @@ class Status(commands.Cog):
     @tasks.loop(seconds=30)
     async def change_status(self):
         # status = ['e ouvindo musiquinhas', 'joguinhos de hentai >///<']
-        status = ['Em atualização 🥱']
+        status = ['Em atualização']
         await self.bot.change_presence(activity=nextcord.Game(choice(status)))
 
 

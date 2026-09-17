@@ -18,7 +18,7 @@ class Ready(commands.Cog):
         if TEXT_CHANNEL_ID:
             channel = self.bot.get_channel(TEXT_CHANNEL_ID)
             if channel:
-                await channel.send("Olá, estou pronta.")
+                await channel.send("Sistema conectado e pronto.")
 
 
 def setup(bot):

@@ -25,9 +25,9 @@ class Manager(commands.Cog):
     @commands.Cog.listener()
     async def on_command_error(self, ctx, error):
         if isinstance(error, MissingRequiredArgument):
-            await ctx.send("**Favor enviar todos os Argumentos! Digite /help para ver os parâmetros do comando.**")
+            await ctx.send("Argumentos insuficientes. Use /help para ver os parâmetros do comando.")
         elif isinstance(error, CommandNotFound):
-            await ctx.send("**O comando não existe. Digite /help para ver todos os comandos.**")
+            await ctx.send("Comando inexistente. Use /help para ver a lista de comandos.")
         else:
             raise error
 

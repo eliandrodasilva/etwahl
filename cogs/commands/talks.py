@@ -12,17 +12,15 @@ class Talks(commands.Cog):
     @commands.command(name="oi", help="Este comando retorna uma mensagem aleatória")
     async def send_hello(self, ctx):
         responses = [
-            '***resmunga*** Me chamando pq?',
-            'Oi',
-            'Oie, como vai?',
-            'Oiii <3',
-            '**oi meu bombom**',
+            'Olá.',
+            'Oi, tudo bem?',
+            'Olá, como posso ajudar?',
         ]
         await ctx.send(choice(responses))
 
     @commands.command(name="pv", help="Lhe envia mensagens no privado.")
     async def secret(self, ctx):
-        await ctx.send("Opps, esse comando está desabilitado no momento. Dixculpa :(")
+        await ctx.send("Comando desabilitado no momento.")
         # try:
         #     await ctx.author.send("Oi docinho <3")
         #     await ctx.author.send("Só passando aqui pra dar um oi")

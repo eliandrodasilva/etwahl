@@ -13,14 +13,14 @@ class Help(commands.Cog):
         self.bot = bot
 
     @nextcord.slash_command(
-        description="Descreve todos os comandos do Bot",
+        description="Exibe a lista de comandos do bot.",
         guild_ids=servidores,
     )
     async def help(self, interaction: Interaction):
         await embed_commands_list(interaction)
 
     @nextcord.slash_command(
-        description="Te responde dizendo aquilo que você digitou",
+        description="Repete a mensagem informada.",
         guild_ids=servidores,
     )
     async def mediga(self, interaction: Interaction, mensagem):
