@@ -1,6 +1,9 @@
 from random import choice
 import nextcord
+from nextcord import Interaction
 from nextcord.ext import commands
+
+from config import servidores
 
 
 class Talks(commands.Cog):
@@ -9,26 +12,18 @@ class Talks(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(name="oi", help="Este comando retorna uma mensagem aleatória")
-    async def send_hello(self, ctx):
+    @nextcord.slash_command(name="oi", description="Envia uma saudação.", guild_ids=servidores)
+    async def send_hello(self, interaction: Interaction):
         responses = [
             'Olá.',
             'Oi, tudo bem?',
             'Olá, como posso ajudar?',
         ]
-        await ctx.send(choice(responses))
+        await interaction.send(choice(responses))
 
-    @commands.command(name="pv", help="Lhe envia mensagens no privado.")
-    async def secret(self, ctx):
-        await ctx.send("Comando desabilitado no momento.")
-        # try:
-        #     await ctx.author.send("Oi docinho <3")
-        #     await ctx.author.send("Só passando aqui pra dar um oi")
-        #     await ctx.author.send("Precisa de ajuda? digite !help ou !comandos ;)")
-        # except nextcord.errors.Forbidden:
-        #     await ctx.send("O comando só funciona com o PV liberado rsrsrs")
-        #     await ctx.send("(obs: para liberar o pv vá em "
-        #                    "[Privacidade e Segurança] e habilite [permitir DMs de membros do servidor])")
+    @nextcord.slash_command(name="pv", description="Envia uma mensagem no privado.", guild_ids=servidores)
+    async def secret(self, interaction: Interaction):
+        await interaction.send("Comando desabilitado no momento.", ephemeral=True)
 
 
 def setup(bot):

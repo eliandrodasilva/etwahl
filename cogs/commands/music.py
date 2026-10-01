@@ -224,7 +224,11 @@ class Musics(commands.Cog):
         description="Toca a música informada ou adiciona à fila.",
         guild_ids=servidores
     )
-    async def tocar(self, interaction: Interaction, url_video: str):
+    async def tocar(
+        self,
+        interaction: Interaction,
+        busca: str = nextcord.SlashOption(description="Nome ou link da música")
+    ):
         if not interaction.user.voice or not interaction.user.voice.channel:
             return await interaction.send("Você precisa estar em um canal de voz.")
 
@@ -238,7 +242,7 @@ class Musics(commands.Cog):
         last_text_channels[interaction.guild_id] = interaction.channel
         cancel_disconnect_timer(interaction.guild_id)
 
-        song_info = await self._extract_song_info(url_video)
+        song_info = await self._extract_song_info(busca)
         if not song_info or not song_info.get('audio_url'):
             return await interaction.followup.send("Não foi possível encontrar ou extrair o áudio desta música.")
 
@@ -316,191 +320,98 @@ class Musics(commands.Cog):
         voice_client.stop()
         await interaction.send("Tocando próxima música.")
 
-    @commands.command(aliases=['p'], pass_context=True)
-    async def play(self, ctx, *url):
-        if not ctx.author.voice or not ctx.author.voice.channel:
-            return await ctx.send("Você precisa estar em um canal de voz.")
-
-        search_text = " ".join(url).strip()
-        if not search_text:
-            return await ctx.send("Informe o nome ou link da música.")
-
-        voice_channel = ctx.author.voice.channel
-        if ctx.voice_client is None:
-            await voice_channel.connect()
-            await ctx.send(f'Conectado ao canal ``{voice_channel}``.')
-
-        last_text_channels[ctx.guild.id] = ctx.channel
-        cancel_disconnect_timer(ctx.guild.id)
-
-        async with ctx.typing():
-            await ctx.send(f'Buscando: `{search_text}`.')
-            song_info = await self._extract_song_info(search_text)
-            if not song_info or not song_info.get('audio_url'):
-                return await ctx.send("Não foi possível encontrar ou extrair o áudio desta música.")
-
-            try:
-                source = await nextcord.FFmpegOpusAudio.from_probe(song_info['audio_url'], **FFMPEG_OPTIONS)
-            except Exception as error:
-                return await ctx.send(f"Erro ao processar áudio: `{error}`.")
-
-            guild_id = ctx.guild.id
-            song_info['requester'] = ctx.author.name
-
-            if guild_id not in queues or not ctx.voice_client.is_playing():
-                queues[guild_id] = {'sources': [], 'names': [song_info['title']], 'infos': []}
-                ctx.voice_client.play(source, after=lambda error: check_queue(guild_id, ctx.voice_client))
-                embed = embed_now_playing(
-                    song_info['title'],
-                    song_info['webpage_url'],
-                    song_info['channel'],
-                    song_info['duration'],
-                    song_info['thumbnail'],
-                    ctx.author.name
-                )
-                view = MusicPlayerView(guild_id, queues, cancel_disconnect_timer, last_text_channels)
-                await ctx.send(embed=embed, view=view)
-            else:
-                queues[guild_id]['sources'].append(source)
-                queues[guild_id]['names'].append(song_info['title'])
-                if 'infos' not in queues[guild_id]:
-                    queues[guild_id]['infos'] = []
-                queues[guild_id]['infos'].append(song_info)
-                queue_pos = len(queues[guild_id]['sources'])
-                await embed_music_added_to_queue(
-                    ctx,
-                    song_info['title'],
-                    song_info['webpage_url'],
-                    song_info['channel'],
-                    song_info['duration'],
-                    song_info['thumbnail'],
-                    queue_pos
-                )
-
-    @commands.command(aliases=['fila'])
-    async def queue(self, ctx):
-        guild_id = ctx.guild.id
+    @nextcord.slash_command(name="queue", description="Exibe a fila de reprodução.", guild_ids=servidores)
+    async def queue(self, interaction: Interaction):
+        guild_id = interaction.guild_id
         if guild_id in queues and len(queues[guild_id]['names']) > 0:
             names = queues[guild_id]['names']
-            await embed_music_queue_list(ctx, names[0], names[1:])
+            await embed_music_queue_list(interaction, names[0], names[1:])
         else:
-            await ctx.send("Nenhuma música em reprodução.")
+            await interaction.send("Nenhuma música em reprodução.")
 
-    @commands.command()
-    async def clear(self, ctx):
-        guild_id = ctx.guild.id
+    @nextcord.slash_command(name="clear", description="Limpa as próximas músicas da fila.", guild_ids=servidores)
+    async def clear(self, interaction: Interaction):
+        guild_id = interaction.guild_id
         if guild_id in queues and len(queues[guild_id]['sources']) > 0:
             queues[guild_id]['sources'].clear()
             queues[guild_id]['names'] = queues[guild_id]['names'][:1]
             if 'infos' in queues[guild_id]:
                 queues[guild_id]['infos'].clear()
-            await ctx.send("Fila limpa.")
+            await interaction.send("Fila limpa.")
         else:
-            await ctx.send("A fila já está vazia.")
+            await interaction.send("A fila já está vazia.")
 
-    @commands.command()
-    async def remove(self, ctx, position):
-        guild_id = ctx.guild.id
+    @nextcord.slash_command(name="remove", description="Remove uma música da fila pela posição.", guild_ids=servidores)
+    async def remove(
+        self,
+        interaction: Interaction,
+        posicao: int = nextcord.SlashOption(description="Posição da música na fila (a partir de 1)")
+    ):
+        guild_id = interaction.guild_id
         if guild_id not in queues or len(queues[guild_id]['sources']) == 0:
-            return await ctx.send("A fila está vazia.")
+            return await interaction.send("A fila está vazia.")
 
-        if not str(position).isdigit():
-            return await ctx.send("Posição inválida. Informe um número válido.")
+        if posicao < 1 or posicao > len(queues[guild_id]['sources']):
+            return await interaction.send("Posição não encontrada na fila.")
 
-        pos = int(position)
-        if pos < 1 or pos > len(queues[guild_id]['sources']):
-            return await ctx.send("Posição não encontrada na fila.")
+        removed_name = queues[guild_id]['names'].pop(posicao)
+        del queues[guild_id]['sources'][posicao - 1]
+        if 'infos' in queues[guild_id] and len(queues[guild_id]['infos']) >= posicao:
+            del queues[guild_id]['infos'][posicao - 1]
+        await interaction.send(f"Música `{removed_name}` removida da fila.")
 
-        removed_name = queues[guild_id]['names'].pop(pos)
-        del queues[guild_id]['sources'][pos - 1]
-        if 'infos' in queues[guild_id] and len(queues[guild_id]['infos']) >= pos:
-            del queues[guild_id]['infos'][pos - 1]
-        await ctx.send(f"Música `{removed_name}` removida da fila.")
+    @nextcord.slash_command(name="skipto", description="Pula diretamente para uma posição da fila.", guild_ids=servidores)
+    async def skipto(
+        self,
+        interaction: Interaction,
+        posicao: int = nextcord.SlashOption(description="Posição para onde deseja pular")
+    ):
+        guild_id = interaction.guild_id
+        voice_client = interaction.guild.voice_client
+        if not voice_client or not voice_client.is_connected() or guild_id not in queues or len(queues[guild_id]['sources']) == 0:
+            return await interaction.send("A fila está vazia.")
 
-    @commands.command()
-    async def skip(self, ctx):
-        guild_id = ctx.guild.id
-        voice_client = ctx.voice_client
-        if not voice_client or not voice_client.is_connected() or guild_id not in queues or len(queues[guild_id]['names']) < 1:
-            return await ctx.send("Não há músicas na fila para pular.")
+        if posicao < 1 or posicao > len(queues[guild_id]['sources']):
+            return await interaction.send("Posição não encontrada na fila.")
 
-        voice_client.stop()
-        await ctx.send("Tocando próxima música.")
-
-    @commands.command()
-    async def skipto(self, ctx, position):
-        guild_id = ctx.guild.id
-        if guild_id not in queues or len(queues[guild_id]['sources']) == 0:
-            return await ctx.send("A fila está vazia.")
-
-        if not str(position).isdigit():
-            return await ctx.send("Posição inválida. Informe um número válido.")
-
-        pos = int(position)
-        if pos < 1 or pos > len(queues[guild_id]['sources']):
-            return await ctx.send("Posição não encontrada na fila.")
-
-        target_name = queues[guild_id]['names'][pos]
-        queues[guild_id]['sources'] = queues[guild_id]['sources'][pos - 1:]
-        queues[guild_id]['names'] = [queues[guild_id]['names'][0]] + queues[guild_id]['names'][pos:]
+        target_name = queues[guild_id]['names'][posicao]
+        queues[guild_id]['sources'] = queues[guild_id]['sources'][posicao - 1:]
+        queues[guild_id]['names'] = [queues[guild_id]['names'][0]] + queues[guild_id]['names'][posicao:]
         if 'infos' in queues[guild_id]:
-            queues[guild_id]['infos'] = queues[guild_id]['infos'][pos - 1:]
+            queues[guild_id]['infos'] = queues[guild_id]['infos'][posicao - 1:]
 
-        await ctx.send(f"Tocando agora: `{target_name}`.")
-        ctx.voice_client.stop()
+        await interaction.send(f"Tocando agora: `{target_name}`.")
+        voice_client.stop()
 
-    @commands.command()
-    async def pause(self, ctx):
-        voice_client = ctx.voice_client
-        if not voice_client or not voice_client.is_connected():
-            return await ctx.send("Não estou conectado a um canal de voz.")
-        if voice_client.is_playing():
-            voice_client.pause()
-            await ctx.send("Música pausada. Use `!resume` para continuar.")
-        elif voice_client.is_paused():
-            await ctx.send("A música já está pausada.")
-        else:
-            await ctx.send("Nenhuma música em reprodução.")
-
-    @commands.command()
-    async def resume(self, ctx):
-        voice_client = ctx.voice_client
-        if not voice_client or not voice_client.is_connected():
-            return await ctx.send("Não estou conectado a um canal de voz.")
-        if voice_client.is_paused():
-            voice_client.resume()
-            await ctx.send("Reprodução retomada.")
-        elif voice_client.is_playing():
-            await ctx.send("A música já está em reprodução.")
-        else:
-            await ctx.send("Nenhuma música pausada.")
-
-    @commands.command()
-    async def stop(self, ctx):
-        guild_id = ctx.guild.id
+    @nextcord.slash_command(name="stop", description="Interrompe a reprodução, limpa a fila e desconecta o bot.", guild_ids=servidores)
+    async def stop(self, interaction: Interaction):
+        guild_id = interaction.guild_id
         cancel_disconnect_timer(guild_id)
         queues.pop(guild_id, None)
         last_text_channels.pop(guild_id, None)
 
-        if ctx.voice_client:
-            ctx.voice_client.stop()
-            await ctx.voice_client.disconnect()
-            await ctx.send("Desconectado e fila limpa.")
+        voice_client = interaction.guild.voice_client
+        if voice_client:
+            if voice_client.is_playing() or voice_client.is_paused():
+                voice_client.stop()
+            await voice_client.disconnect()
+            await interaction.send("Desconectado e fila limpa.")
         else:
-            await ctx.send("Não estou conectado a um canal de voz.")
+            await interaction.send("Não estou conectado a um canal de voz.")
 
-    @commands.command(aliases=['joinhere'])
-    async def moveto(self, ctx):
-        if not ctx.author.voice or not ctx.author.voice.channel:
-            return await ctx.send("Você precisa estar em um canal de voz.")
-        if not ctx.voice_client:
-            return await ctx.send("Não estou conectado a um canal no momento.")
+    @nextcord.slash_command(name="moveto", description="Move o bot para o seu canal de voz.", guild_ids=servidores)
+    async def moveto(self, interaction: Interaction):
+        if not interaction.user.voice or not interaction.user.voice.channel:
+            return await interaction.send("Você precisa estar em um canal de voz.")
+        voice_client = interaction.guild.voice_client
+        if not voice_client:
+            return await interaction.send("Não estou conectado a um canal no momento.")
 
-        if ctx.author.voice.channel == ctx.voice_client.channel:
-            await ctx.send(f'Já conectado ao canal ``{ctx.voice_client.channel}``.')
+        if interaction.user.voice.channel == voice_client.channel:
+            await interaction.send(f"Já conectado ao canal ``{voice_client.channel}``.")
         else:
-            await ctx.voice_client.move_to(ctx.author.voice.channel)
-            await ctx.reply(f'Conectado ao canal ``{ctx.author.voice.channel}``.')
+            await voice_client.move_to(interaction.user.voice.channel)
+            await interaction.send(f"Conectado ao canal ``{interaction.user.voice.channel}``.")
 
 
 def setup(bot):
