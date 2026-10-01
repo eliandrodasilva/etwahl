@@ -227,7 +227,11 @@ class Musics(commands.Cog):
     async def tocar(
         self,
         interaction: Interaction,
-        busca: str = nextcord.SlashOption(description="Nome ou link da música")
+        musica_ou_link: str = nextcord.SlashOption(
+            name="musica_ou_link",
+            description="Nome da música para buscar ou URL do YouTube",
+            required=True
+        )
     ):
         if not interaction.user.voice or not interaction.user.voice.channel:
             return await interaction.send("Você precisa estar em um canal de voz.")
@@ -242,7 +246,7 @@ class Musics(commands.Cog):
         last_text_channels[interaction.guild_id] = interaction.channel
         cancel_disconnect_timer(interaction.guild_id)
 
-        song_info = await self._extract_song_info(busca)
+        song_info = await self._extract_song_info(musica_ou_link)
         if not song_info or not song_info.get('audio_url'):
             return await interaction.followup.send("Não foi possível encontrar ou extrair o áudio desta música.")
 

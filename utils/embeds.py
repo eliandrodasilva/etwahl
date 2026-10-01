@@ -65,7 +65,7 @@ async def embed_commands_list(interaction):
     embed.set_author(name='Lista de comandos do bot')
     embed.add_field(name='/join', value='Conecta o bot ao seu canal de voz.', inline=False)
     embed.add_field(name='/leave', value='Desconecta o bot do canal de voz.', inline=False)
-    embed.add_field(name='/play [busca]', value='Reproduz o áudio ou adiciona à fila.', inline=False)
+    embed.add_field(name='/play [música ou link]', value='Busca pelo nome ou reproduz diretamente pelo link.', inline=False)
     embed.add_field(name='/pause', value='Pausa a reprodução atual.', inline=False)
     embed.add_field(name='/resume', value='Retoma a reprodução pausada.', inline=False)
     embed.add_field(name='/skip', value='Avança para a próxima música da fila.', inline=False)
