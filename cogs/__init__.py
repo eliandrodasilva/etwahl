@@ -1,1 +1,1 @@
-"""Pacote de Cogs (extensões) do bot."""
+"""Pacote de Cogs (extensões) da bot."""

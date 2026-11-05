@@ -57,9 +57,9 @@ def schedule_disconnect(guild, delay: int = 180, reason: str = "inatividade"):
                     if text_channel:
                         try:
                             if reason == "canal_vazio":
-                                await text_channel.send("Desconectado do canal de voz: canal vazio.")
+                                await text_channel.send("Desconectada do canal de voz: canal vazio.")
                             else:
-                                await text_channel.send("Desconectado do canal de voz por inatividade.")
+                                await text_channel.send("Desconectada do canal de voz por inatividade.")
                         except Exception:
                             pass
         except asyncio.CancelledError:
@@ -188,7 +188,7 @@ class Musics(commands.Cog):
             if not voice_client.is_playing() and not voice_client.is_paused():
                 schedule_disconnect(member.guild, delay=180, reason="inatividade")
 
-    @nextcord.slash_command(name="join", description="Conecta o bot ao seu canal de voz.", guild_ids=servidores)
+    @nextcord.slash_command(name="join", description="Conecta a bot ao seu canal de voz.", guild_ids=servidores)
     async def join(self, interaction: Interaction):
         if not interaction.user.voice or not interaction.user.voice.channel:
             return await interaction.send("Você precisa estar em um canal de voz.")
@@ -200,14 +200,14 @@ class Musics(commands.Cog):
         if interaction.guild.voice_client is None:
             await channel.connect()
             schedule_disconnect(interaction.guild, delay=180, reason="inatividade")
-            await interaction.send(f'Conectado ao canal ``{channel}``.')
+            await interaction.send(f'Conectada ao canal ``{channel}``.')
         else:
-            await interaction.send(f'Já conectado ao canal ``{interaction.guild.voice_client.channel}``.')
+            await interaction.send(f'Já conectada ao canal ``{interaction.guild.voice_client.channel}``.')
 
-    @nextcord.slash_command(name="leave", description="Desconecta o bot do canal de voz.", guild_ids=servidores)
+    @nextcord.slash_command(name="leave", description="Desconecta a bot do canal de voz.", guild_ids=servidores)
     async def disconnect(self, interaction: Interaction):
         if interaction.guild.voice_client is None:
-            return await interaction.send("Não estou conectado a um canal de voz.")
+            return await interaction.send("Não estou conectada a um canal de voz.")
 
         channel = interaction.guild.voice_client.channel
         cancel_disconnect_timer(interaction.guild_id)
@@ -217,7 +217,7 @@ class Musics(commands.Cog):
         if interaction.guild.voice_client.is_playing() or interaction.guild.voice_client.is_paused():
             interaction.guild.voice_client.stop()
         await interaction.guild.voice_client.disconnect()
-        await interaction.send(f'Desconectado do canal ``{channel}``.')
+        await interaction.send(f'Desconectada do canal ``{channel}``.')
 
     @nextcord.slash_command(
         name="play",
@@ -292,7 +292,7 @@ class Musics(commands.Cog):
     async def pausar(self, interaction: Interaction):
         voice_client = interaction.guild.voice_client
         if not voice_client or not voice_client.is_connected():
-            return await interaction.send("Não estou conectado a um canal de voz.")
+            return await interaction.send("Não estou conectada a um canal de voz.")
         if voice_client.is_playing():
             voice_client.pause()
             await interaction.send("Música pausada. Use `/resume` para continuar.")
@@ -305,7 +305,7 @@ class Musics(commands.Cog):
     async def retomar(self, interaction: Interaction):
         voice_client = interaction.guild.voice_client
         if not voice_client or not voice_client.is_connected():
-            return await interaction.send("Não estou conectado a um canal de voz.")
+            return await interaction.send("Não estou conectada a um canal de voz.")
         if voice_client.is_paused():
             voice_client.resume()
             await interaction.send("Reprodução retomada.")
@@ -387,7 +387,7 @@ class Musics(commands.Cog):
         await interaction.send(f"Tocando agora: `{target_name}`.")
         voice_client.stop()
 
-    @nextcord.slash_command(name="stop", description="Interrompe a reprodução, limpa a fila e desconecta o bot.", guild_ids=servidores)
+    @nextcord.slash_command(name="stop", description="Interrompe a reprodução, limpa a fila e desconecta a bot.", guild_ids=servidores)
     async def stop(self, interaction: Interaction):
         guild_id = interaction.guild_id
         cancel_disconnect_timer(guild_id)
@@ -399,23 +399,23 @@ class Musics(commands.Cog):
             if voice_client.is_playing() or voice_client.is_paused():
                 voice_client.stop()
             await voice_client.disconnect()
-            await interaction.send("Desconectado e fila limpa.")
+            await interaction.send("Desconectada e fila limpa.")
         else:
-            await interaction.send("Não estou conectado a um canal de voz.")
+            await interaction.send("Não estou conectada a um canal de voz.")
 
-    @nextcord.slash_command(name="moveto", description="Move o bot para o seu canal de voz.", guild_ids=servidores)
+    @nextcord.slash_command(name="moveto", description="Move a bot para o seu canal de voz.", guild_ids=servidores)
     async def moveto(self, interaction: Interaction):
         if not interaction.user.voice or not interaction.user.voice.channel:
             return await interaction.send("Você precisa estar em um canal de voz.")
         voice_client = interaction.guild.voice_client
         if not voice_client:
-            return await interaction.send("Não estou conectado a um canal no momento.")
+            return await interaction.send("Não estou conectada a um canal no momento.")
 
         if interaction.user.voice.channel == voice_client.channel:
-            await interaction.send(f"Já conectado ao canal ``{voice_client.channel}``.")
+            await interaction.send(f"Já conectada ao canal ``{voice_client.channel}``.")
         else:
             await voice_client.move_to(interaction.user.voice.channel)
-            await interaction.send(f"Conectado ao canal ``{interaction.user.voice.channel}``.")
+            await interaction.send(f"Conectada ao canal ``{interaction.user.voice.channel}``.")
 
 
 def setup(bot):

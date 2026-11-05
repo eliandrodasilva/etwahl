@@ -5,14 +5,14 @@ from nextcord.ext.commands.errors import CommandNotFound, MissingRequiredArgumen
 
 
 class Manager(commands.Cog):
-    """Gerenciamento de eventos do bot e tratamento de erros."""
+    """Gerenciamento de eventos da bot e tratamento de erros."""
 
     def __init__(self, bot):
         self.bot = bot
 
     @commands.Cog.listener()
     async def on_ready(self):
-        print(f"Olá, sou Euterpe. Estou conectado como {self.bot.user}")
+        print(f"Olá, sou Euterpe. Estou conectada como {self.bot.user}")
 
     @commands.Cog.listener()
     async def on_message(self, message):

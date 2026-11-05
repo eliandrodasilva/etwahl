@@ -1,1 +1,1 @@
-"""Cogs de eventos e gerenciamento do bot."""
+"""Cogs de eventos e gerenciamento da bot."""
