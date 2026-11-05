@@ -13,10 +13,10 @@ class MusicPlayerView(nextcord.ui.View):
     async def _validate_user(self, interaction: nextcord.Interaction) -> bool:
         voice_client = interaction.guild.voice_client
         if not voice_client or not voice_client.is_connected():
-            await interaction.send("Não estou conectado a um canal de voz.", ephemeral=True)
+            await interaction.send("Não estou conectada a um canal de voz.", ephemeral=True)
             return False
         if not interaction.user.voice or interaction.user.voice.channel != voice_client.channel:
-            await interaction.send("Você precisa estar no mesmo canal de voz que o bot.", ephemeral=True)
+            await interaction.send("Você precisa estar no mesmo canal de voz que a bot.", ephemeral=True)
             return False
         return True
 
@@ -82,4 +82,4 @@ class MusicPlayerView(nextcord.ui.View):
         if voice_client.is_playing() or voice_client.is_paused():
             voice_client.stop()
         await voice_client.disconnect()
-        await interaction.followup.send("Reprodução interrompida e bot desconectado.")
+        await interaction.followup.send("Reprodução interrompida e bot desconectada.")

@@ -1,1 +1,1 @@
-"""Módulo de utilitários do bot."""
+"""Módulo de utilitários da bot."""

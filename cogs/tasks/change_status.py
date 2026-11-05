@@ -4,7 +4,7 @@ from nextcord.ext import commands, tasks
 
 
 class Status(commands.Cog):
-    """Atualização periódica do status/presença do bot."""
+    """Atualização periódica do status/presença da bot."""
 
     def __init__(self, bot):
         self.bot = bot

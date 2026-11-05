@@ -1,1 +1,1 @@
-"""Cogs de comandos do bot."""
+"""Cogs de comandos da bot."""

@@ -13,7 +13,7 @@ class Help(commands.Cog):
         self.bot = bot
 
     @nextcord.slash_command(
-        description="Exibe a lista de comandos do bot.",
+        description="Exibe a lista de comandos da bot.",
         guild_ids=servidores,
     )
     async def help(self, interaction: Interaction):
