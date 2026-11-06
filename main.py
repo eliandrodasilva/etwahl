@@ -6,7 +6,7 @@ from config import COMMAND_PREFIX, TOKEN
 
 
 def create_bot() -> commands.Bot:
-    """Cria e configura a instância do bot."""
+    """Cria e configura a instância da bot."""
     intents = nextcord.Intents.default()
     intents.message_content = True
     bot = commands.Bot(command_prefix=COMMAND_PREFIX, intents=intents)
